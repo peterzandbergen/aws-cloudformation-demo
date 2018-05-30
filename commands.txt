@@ -1,0 +1,30 @@
+Commands:
+
+aws cloudformation validate-template --template-body file://single-server.json
+
+aws cloudformation deploy --stack-name "CIOWebserverDemo" --template-file single-server.json
+
+aws cloudformation deploy --stack-name "CIOWebserverDemo" --template-file vpc.json
+
+aws cloudformation deploy --stack-name "CIOWebserverDemo" --template-file vpc.yaml
+
+aws ec2 describe-instances
+
+aws cloudformation list-stack-resources --stack-name "CIOWebserverDemo"
+
+aws cloudformation delete-stack --stack-name "CIOWebserverDemo"
+
+aws ec2 describe-instances | jq '.Reservations[0].Instances[0].PublicIpAddress'
+
+
+
+aws cloudformation deploy --stack-name "CIODockerWebserverDemo" --template-file vpc-docker.yaml
+aws cloudformation delete-stack --stack-name "CIODockerWebserverDemo"
+
+
+
+
+
+aws cloudformation deploy --stack-name "CIOBareServerDemo" --template-file vpc-bare.yaml
+
+aws cloudformation delete-stack --stack-name "CIOBareServerDemo"

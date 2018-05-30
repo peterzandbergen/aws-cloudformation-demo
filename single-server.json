@@ -1,0 +1,99 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Demo for CIO Office members, creates a single, internet facing EC2 instance with nginx installed",
+    "Metadata": {},
+    "Parameters": {},
+    "Mappings": {},
+    "Conditions": {},
+    "Resources": {
+        "Vpc1": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16",
+                "EnableDnsSuport": true,
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-VPC"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "PublicNet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc1"
+                },
+                "CidrBlock": "10.0.0.0/24",
+                "MapPublicIpOnLaunch": true,
+                "Tags": [
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "WebServerSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "-",
+                "SecurityGroupIngress": [],
+                "VpcId": {
+                    "Ref": "Vpc1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-SecurityGroup"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "WebServerInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": "ami-921423eb",
+                "InstanceType": "t2.micro",
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-Instance"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -ex",
+                                "yum update -y",
+                                "yum upgrade -y"
+                            ]
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "Outputs": {}
+}

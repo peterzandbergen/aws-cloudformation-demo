@@ -1,0 +1,178 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Demo for CIO Office members, creates a single, internet facing EC2 instance with nginx installed",
+    "Metadata": {},
+    "Parameters": {},
+    "Mappings": {},
+    "Conditions": {},
+    "Resources": {
+        "Vpc1": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16",
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-VPC"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "PublicSubnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc1"
+                },
+                "CidrBlock": "10.0.1.0/24",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-Subnet1"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "DemoIgw": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-Igw"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc1"
+                },
+                "InternetGatewayId": {
+                    "Ref": "DemoIgw"
+                }
+            }
+        },
+        "SSHSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SSH trafic from anywhere",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "Vpc1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-SG-SSH"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "routeTable1": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-rt"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ]
+            }
+        },
+        "route1": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "routeTable1"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "DemoIgw"
+                }
+            }
+        },
+        "routeTableAssoc1": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnet1"
+                },
+                "RouteTableId": {
+                    "Ref": "routeTable1"
+                }
+            }
+        },
+        "WebServer1": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": "ami-a88233d5",
+                "InstanceType": "t2.micro",
+                "SubnetId": {
+                    "Ref": "PublicSubnet1",
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "SSHSecurityGroup"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Demo-Instance"
+                    },
+                    {
+                        "Key": "Project",
+                        "Value": "CIO-Demo"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -ex",
+                                "yum update -y",
+                                "yum upgrade -y"
+                            ]
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "Outputs": {}
+}

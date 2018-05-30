@@ -1,0 +1,167 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Demo for CIO Office members, creates a single, internet facing EC2 instance with apache-php running as Docker container"
+# Metadata:
+# Parameters:
+# Mappings: 
+# Conditions: 
+Resources: 
+  Vpc1: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: "10.0.0.0/16"
+      InstanceTenancy: "default"
+      Tags: 
+        - Key: "Name"
+          Value: "Demo-VPC"
+        - Key: "Project"
+          Value: "CIO-Demo"
+  PublicSubnet1: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      VpcId: 
+        Ref: "Vpc1" 
+      CidrBlock: "10.0.1.0/24"
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: "Name"
+          Value: "Demo-Subnet1"
+        - Key: "Project"
+          Value: "CIO-Demo"
+  DemoIgw:
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags:
+        - Key: "Name"
+          Value: "Demo-Igw"
+        - Key: "Project"
+          Value: "CIO-Demo"
+  AttachGateway: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      VpcId: 
+        Ref: "Vpc1"
+      InternetGatewayId: 
+        Ref: "DemoIgw"
+  SSHSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties: 
+      GroupDescription: "SSH trafic from anywhere"
+      SecurityGroupIngress: 
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
+      VpcId: 
+          Ref: "Vpc1"
+      Tags: 
+        - Key: "Name"
+          Value: "Demo-SG-SSH"
+        - Key: "Project"
+          Value: "CIO-Demo"
+  HTTPSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties: 
+      GroupDescription: "HTTP trafic from anywhere"
+      SecurityGroupIngress: 
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+      VpcId: 
+          Ref: "Vpc1"
+      Tags: 
+        - Key: "Name"
+          Value: "Demo-SG-HTTP"
+        - Key: "Project"
+          Value: "CIO-Demo"
+  routeTable1: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId:
+        Ref: "Vpc1"
+      Tags: 
+        - Key: "Name"
+          Value: "Demo-rt"
+        - Key: "Project"
+          Value: "CIO-Demo"
+  route1: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId:
+        Ref: "routeTable1"
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: 
+          Ref: "DemoIgw"
+  routeTableAssoc1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: 
+        Ref: "PublicSubnet1"
+      RouteTableId: 
+        Ref: "routeTable1"
+  WebServer1: 
+    Type: "AWS::EC2::Instance"
+    Properties: 
+      ImageId: "ami-a88233d5"
+      InstanceType: "t2.micro"
+      SubnetId: 
+        Ref: "PublicSubnet1"
+      SecurityGroupIds: 
+        - Ref: "SSHSecurityGroup"
+        - Ref: "HTTPSecurityGroup"
+      KeyName: "pezaPublicKey"
+      # PublicDnsName: true
+      Tags: 
+        - Key: "Name"
+          Value: "Demo-Instance"
+        - Key: "Project"
+          Value: "CIO-Demo"
+      UserData: 
+        Fn::Base64: |
+          #!/bin/bash -ex
+          yum update -y
+          yum upgrade -y
+          yum install docker -y
+          mkdir -p /home/ec2-user/html
+          echo 'CBS OCIO Demo!!!' > /home/ec2-user/html/index.html
+          echo '<?php phpinfo(); ?>' > /home/ec2-user/html/phpinfo.php
+          echo '<?php $c = curl_init("http://169.254.169.254/latest/meta-data/local-hostname"); echo curl_exec($c); ?>' > /home/ec2-user/html/public-ipv4.php
+          usermod -G docker ec2-user
+          systemctl enable docker
+          systemctl start docker
+          docker run -d -p 80:80 --name my-apache-php-app -v /home/ec2-user/html:/var/www/html php:7.0-apache
+
+  WebServer2: 
+    Type: "AWS::EC2::Instance"
+    Properties: 
+      ImageId: "ami-a88233d5"
+      InstanceType: "t2.micro"
+      SubnetId: 
+        Ref: "PublicSubnet1"
+      SecurityGroupIds: 
+        - Ref: "SSHSecurityGroup"
+        - Ref: "HTTPSecurityGroup"
+      KeyName: "pezaPublicKey"
+      # PublicDnsName: true
+      Tags: 
+        - Key: "Name"
+          Value: "Demo-Instance"
+        - Key: "Project"
+          Value: "CIO-Demo"
+      UserData: 
+        Fn::Base64: |
+          #!/bin/bash -ex
+          yum update -y
+          yum upgrade -y
+          yum install docker -y
+          mkdir -p /home/ec2-user/html
+          echo 'CBS OCIO Demo!!!' > /home/ec2-user/html/index.html
+          echo '<?php phpinfo(); ?>' > /home/ec2-user/html/phpinfo.php
+          echo '<?php $c = curl_init("http://169.254.169.254/latest/meta-data/local-hostname"); echo curl_exec($c); ?>' > /home/ec2-user/html/public-ipv4.php
+          usermod -G docker ec2-user
+          systemctl enable docker
+          systemctl start docker
+          docker run -d -p 80:80 --name my-apache-php-app -v /home/ec2-user/html:/var/www/html php:7.0-apache
+
+  LoadBalancer1:
+    Type: ""
